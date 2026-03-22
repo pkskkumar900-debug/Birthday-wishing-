@@ -30,7 +30,6 @@ import {
 interface WishData {
   name: string;
   msg: string;
-  photo?: string;
   occasion: string;
 }
 
@@ -102,8 +101,6 @@ export default function App() {
   const [formData, setFormData] = useState({ name: '', msg: '', occasion: 'birthday' });
   const [photo, setPhoto] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   
   // 3D Tilt State
@@ -135,7 +132,6 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     const name = params.get('n') || params.get('name');
     const msg = params.get('m') || params.get('msg');
-    const photoParam = params.get('p') || params.get('photo');
     const occasionParam = params.get('o') || 'birthday';
 
     if (name && msg) {
@@ -143,12 +139,8 @@ export default function App() {
       setWish({ 
         name, 
         msg, 
-        photo: photoParam ? decodeURIComponent(photoParam) : undefined,
         occasion: occasionParam
       });
-      document.title = `${occasionData.emoji} ${occasionData.title} ${name} ✨`;
-    } else {
-      document.title = "✨ Magic Wishes";
     }
 
     const timer = setTimeout(() => setLoading(false), 2000);
@@ -252,40 +244,17 @@ export default function App() {
     }
   };
 
-  const generateLink = async (e: React.FormEvent) => {
+  const generateLink = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsGenerating(true);
     
     const baseUrl = window.location.origin + window.location.pathname;
     const params = new URLSearchParams();
     params.set('n', formData.name);
     params.set('m', formData.msg);
     params.set('o', formData.occasion);
-    if (photo) {
-      params.set('p', encodeURIComponent(photo));
-    }
-    const longUrl = `${baseUrl}?${params.toString()}`;
     
-    try {
-      // Use tinyurl via allorigins proxy to bypass CORS
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`)}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.contents && data.contents.startsWith('http')) {
-          setGeneratedLink(data.contents);
-          setIsGenerating(false);
-          return;
-        }
-      }
-      // Fallback to long url if shortening fails
-      setGeneratedLink(longUrl);
-    } catch (error) {
-      console.error("Error shortening link:", error);
-      setGeneratedLink(longUrl);
-    } finally {
-      setIsGenerating(false);
-    }
+    const link = `${baseUrl}?${params.toString()}`;
+    setGeneratedLink(link);
   };
 
   const copyToClipboard = () => {
@@ -295,7 +264,7 @@ export default function App() {
   };
 
   const shareOnWhatsApp = () => {
-    const text = `🎁 Tumhare liye ek surprise hai 😍\nClick karo 👉 ${generatedLink}`;
+    const text = `🎁 Tumhare liye ek surprise hai 😍\n👉 ${generatedLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -433,20 +402,10 @@ export default function App() {
                 </div>
                 <button 
                   type="submit"
-                  disabled={isGenerating}
-                  className="w-full py-5 rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-xl border border-white/30 text-white font-black text-lg shadow-[0_8px_32px_0_rgba(255,255,255,0.1)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] transition-all active:scale-[0.98] flex items-center justify-center gap-3 group/btn disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full py-5 rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-xl border border-white/30 text-white font-black text-lg shadow-[0_8px_32px_0_rgba(255,255,255,0.1)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] transition-all active:scale-[0.98] flex items-center justify-center gap-3 group/btn"
                 >
-                  {isGenerating ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />
-                      Generating Magic Link...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={22} className="group-hover/btn:rotate-12 transition-transform text-white drop-shadow-md" />
-                      Generate Magic Link
-                    </>
-                  )}
+                  <Sparkles size={22} className="group-hover/btn:rotate-12 transition-transform text-white drop-shadow-md" />
+                  Generate Magic Link
                 </button>
               </form>
 
@@ -597,25 +556,6 @@ export default function App() {
                     {wish.name}
                   </motion.h1>
 
-                  {wish.photo && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-                      animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                      transition={{ delay: 0.5, type: "spring" }}
-                      className="mb-12 relative group"
-                    >
-                      <div className="absolute inset-0 bg-fuchsia-500/20 blur-3xl rounded-full group-hover:bg-fuchsia-500/30 transition-all duration-700" />
-                      <div className="relative p-2 rounded-[2rem] bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl overflow-hidden max-w-[300px] md:max-w-[400px]">
-                        <img 
-                          src={wish.photo} 
-                          alt="Birthday Person" 
-                          className="w-full h-auto rounded-[1.5rem] shadow-inner"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ 
@@ -656,48 +596,22 @@ export default function App() {
                       <PartyPopper size={32} className="drop-shadow-md" />
                     </button>
                     <button 
-                      onClick={async () => {
-                        setIsSharing(true);
+                      onClick={() => {
                         const baseUrl = window.location.origin + window.location.pathname;
                         const params = new URLSearchParams();
                         params.set('n', wish.name);
                         params.set('m', wish.msg);
                         params.set('o', wish.occasion);
-                        if (wish.photo) {
-                          params.set('p', encodeURIComponent(wish.photo));
-                        }
-                        const longUrl = `${baseUrl}?${params.toString()}`;
                         
-                        let linkToShare = longUrl;
-                        try {
-                          const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`)}`);
-                          if (response.ok) {
-                            const data = await response.json();
-                            if (data.contents && data.contents.startsWith('http')) {
-                              linkToShare = data.contents;
-                            }
-                          }
-                        } catch (error) {
-                          console.error("Error shortening link:", error);
-                        } finally {
-                          setIsSharing(false);
-                        }
-
-                        navigator.clipboard.writeText(linkToShare);
+                        const link = `${baseUrl}?${params.toString()}`;
+                        navigator.clipboard.writeText(link);
                         setCopied(true);
                         setTimeout(() => setCopied(false), 2000);
                       }}
-                      disabled={isSharing}
-                      className="px-10 py-5 rounded-3xl bg-white/20 hover:bg-white/30 backdrop-blur-xl border border-white/30 text-white transition-all active:scale-95 flex items-center gap-3 font-black text-lg shadow-[0_8px_32px_0_rgba(255,255,255,0.1)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] disabled:opacity-70 disabled:cursor-not-allowed"
+                      className="px-10 py-5 rounded-3xl bg-white/20 hover:bg-white/30 backdrop-blur-xl border border-white/30 text-white transition-all active:scale-95 flex items-center gap-3 font-black text-lg shadow-[0_8px_32px_0_rgba(255,255,255,0.1)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]"
                     >
-                      {isSharing ? (
-                        <div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />
-                      ) : copied ? (
-                        <Check size={24} className="text-emerald-400 drop-shadow-md" />
-                      ) : (
-                        <Share2 size={24} className="drop-shadow-md" />
-                      )}
-                      <span className="drop-shadow-md">{isSharing ? 'Generating...' : copied ? 'Link Copied!' : 'Share this Wish'}</span>
+                      {copied ? <Check size={24} className="text-emerald-400 drop-shadow-md" /> : <Share2 size={24} className="drop-shadow-md" />}
+                      <span className="drop-shadow-md">{copied ? 'Link Copied!' : 'Share this Wish'}</span>
                     </button>
                   </motion.div>
 
